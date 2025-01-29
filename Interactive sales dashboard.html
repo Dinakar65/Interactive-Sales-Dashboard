@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Sales Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        #dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Sales Dashboard</h1>
+    <input type="file" id="fileInput" accept="application/json">
+    <div id="dashboard">
+        <div id="salesByRegion" class="chart"></div>
+        <div id="categoriesPerformance" class="chart"></div>
+        <div id="monthlyTrends" class="chart"></div>
+        <div id="customerSegmentation" class="chart"></div>
+        <div id="productPerformance" class="chart"></div>
+        <div id="salesByShipMode" class="chart"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = JSON.parse(e.target.result);
+                generateDashboard(data);
+            };
+            reader.readAsText(file);
+        });
+
+        function generateDashboard(data) {
+            // Prepare data for visualizations
+            const regions = {};
+            const categories = {};
+            const monthlySales = {};
+            const segments = {};
+            const products = {};
+            const shipModes = {};
+
+            data.forEach(order => {
+                // Sales by Region
+                if (!regions[order.Region]) regions[order.Region] = 0;
+                regions[order.Region] += order.Sales;
+
+                // Categories and Sub-Categories
+                if (!categories[order.Category]) categories[order.Category] = 0;
+                categories[order.Category] += order.Sales;
+
+                // Monthly Sales Trends
+                const orderDate = new Date(order['Order Date']);
+                const monthYear = `${orderDate.getMonth() + 1}-${orderDate.getFullYear()}`;
+                if (!monthlySales[monthYear]) monthlySales[monthYear] = 0;
+                monthlySales[monthYear] += order.Sales;
+
+                // Customer Segmentation
+                if (!segments[order.Segment]) segments[order.Segment] = 0;
+                segments[order.Segment] += order.Sales;
+
+                // Product Performance
+                if (!products[order['Product Name']]) products[order['Product Name']] = 0;
+                products[order['Product Name']] += order.Sales;
+
+                // Sales by Ship Mode
+                if (!shipModes[order['Ship Mode']]) shipModes[order['Ship Mode']] = 0;
+                shipModes[order['Ship Mode']] += order.Sales;
+            });
+
+            // Sales by Region Chart
+            Plotly.newPlot('salesByRegion', [{
+                x: Object.keys(regions),
+                y: Object.values(regions),
+                type: 'bar',
+                marker: { color: 'blue' }
+            }], {
+                title: 'Sales by Region'
+            });
+
+            // Categories Performance Chart
+            Plotly.newPlot('categoriesPerformance', [{
+                x: Object.keys(categories),
+                y: Object.values(categories),
+                type: 'bar',
+                marker: { color: 'orange' }
+            }], {
+                title: 'Top Categories by Sales'
+            });
+
+            // Monthly Trends Chart
+            const sortedMonths = Object.keys(monthlySales).sort((a, b) => new Date(`01-${a}`) - new Date(`01-${b}`));
+            const sortedValues = sortedMonths.map(month => monthlySales[month]);
+            Plotly.newPlot('monthlyTrends', [{
+                x: sortedMonths,
+                y: sortedValues,
+                type: 'scatter',
+                mode: 'lines+markers',
+                marker: { color: 'green' }
+            }], {
+                title: 'Monthly Sales Trends'
+            });
+
+            // Customer Segmentation Chart
+            Plotly.newPlot('customerSegmentation', [{
+                labels: Object.keys(segments),
+                values: Object.values(segments),
+                type: 'pie'
+            }], {
+                title: 'Customer Segmentation'
+            });
+
+            // Product Performance Chart
+            const topProducts = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            Plotly.newPlot('productPerformance', [{
+                x: topProducts.map(p => p[0]),
+                y: topProducts.map(p => p[1]),
+                type: 'bar',
+                marker: { color: 'purple' }
+            }], {
+                title: 'Top 10 Products by Sales'
+            });
+
+            // Sales by Ship Mode Chart
+            Plotly.newPlot('salesByShipMode', [{
+                x: Object.keys(shipModes),
+                y: Object.values(shipModes),
+                type: 'bar',
+                marker: { color: 'red' }
+            }], {
+                title: 'Sales by Ship Mode'
+            });
+        }
+    </script>
+</body>
+</html>
